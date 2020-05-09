@@ -236,3 +236,85 @@ vagrant ssh
 
 
 Видим что все отработало верно.
+
+
+
+### Задание со *
+
+Сборка ядра ресурсоемкий процесс, изменяем конфигурации VM, увеличиваем количество ядер и оперативной памяти.
+
+```bash
+MACHINES = {
+  # VM name "kernel update"
+  :"otusVMsource" => {
+              # VM box
+              :box_name => "centos-7-5-s",
+              # VM CPU count
+              :cpus => 4,
+              # VM RAM size (Mb)
+              :memory => 4096,
+              # networks
+              :net => [],
+              # forwarded ports
+              :forwarded_port => []
+            }
+}
+
+```
+
+ Дополнительно необходимо увеличить объем виртуального жесткого диска до 25ГБ.
+
+```json
+"boot_wait": "10s",
+"disk_size": "25480",
+"guest_os_type": "RedHat_64",
+"http_directory": "http",
+```
+
+Далее аналогично базовому заданию собираем  образ с помощью **Packer**, предварительно сконфигурировав первый скрипт.
+
+```bash
+# Source kernel
+yum groupinstall -y "Development Tools" #Установка библиотек разработчика
+yum install -y wget make gcc flex openssl-devel bc elfutils-libelf-devel ncurses-devel # Установка необходимых пакетов
+cd ~
+wget https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.6.11.tar.xz # Скачиваем стабильное ядро
+tar -xf linux-5.6.11.tar.xz # Разархивируем
+cd linux-5.6.11
+cp -v /boot/config-$(uname -r) .config # Копируем конфиги из рабочего ядра
+make olddefconfig .config -j$(nproc) # Конвертируем старую конфигурацию
+make -j$(nproc) # Собираем
+make modules_install -j$(nproc) # Устанавливаем модули
+make install -j$(nproc) # Устанавливаем ядро
+```
+
+##### Тестирование.
+
+Импортируем полученный образ в Vagrant присваивая ему имя **centos-7-5-s**
+
+```bash
+vagrant box add --name centos-7-5-s centos-7.8.2003-kernel-5-x86_64-Minimal.box
+```
+
+Проверяем, появился ли образ в списке
+
+```bash
+vagrant box list
+centos-7-5            (virtualbox, 0)
+```
+
+Изменяем имя образа в **Vagrantfile**
+
+```ruby
+:box_name => "alekho/centos-7-5-s"
+```
+
+Запускаем, проверяем
+
+```bash
+vagrant up
+vagrant ssh
+[vagrant@otusVM ~]$ uname -r
+5.6.11
+```
+
