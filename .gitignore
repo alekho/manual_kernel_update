@@ -1,3 +1,4 @@
 *.box
 .vagrant/
 packer_cache/
+kernel-update-source/packer_cache/
